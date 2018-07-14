@@ -18,11 +18,26 @@ namespace Arduino
 			volatile bool ready_to_process = false;
 
 		public:
-			char *buffer;
+			typedef enum
+			{
+				Mode0,
+				Mode1,
+				Mode2,
+				Mode3,
+			} SPIMode;
+
+			typedef enum
+			{
+				LSBFirst,
+				MSBFirst
+			} BitOrder;
+
+			uint8_t *buffer;
 
 			Stack(uint8_t buffer_size)
 			{
-				this->buffer = new char[buffer_size];
+				this->buffer = new uint8_t[buffer_size];
+				memset(this->buffer, 0, sizeof(this->buffer));
 			}
 
 			~Stack()
@@ -30,14 +45,37 @@ namespace Arduino
 				delete this->buffer;
 			}
 
-			void setup()
+			void setup(SPIMode mode, BitOrder order)
 			{
-				// have to send on master in, *slave out*
 				pinMode(MISO, OUTPUT);
-				// turn on SPI in slave mode
 				SPCR |= _BV(SPE);
-				// turn on interrupts
-				SPCR |= bit(SPIE);
+
+				switch (mode) {
+					case Mode0:
+						SPCR |= (0 << CPHA);
+						SPCR |= (0 << CPOL);
+						break;
+					case Mode1:
+						SPCR |= (0 << CPHA);
+						SPCR |= (1 << CPOL);
+						break;
+					case Mode2:
+						SPCR |= (1 << CPHA);
+						SPCR |= (0 << CPOL);
+						break;
+					case Mode3:
+						SPCR |= (1 << CPHA);
+						SPCR |= (1 << CPOL);
+						break;
+				}
+
+				if (order == LSBFirst) {
+					SPCR |= (1 << DORD);
+				}
+
+				SPCR &= ~(1 << MSTR);
+				SPCR |= (1 << SPE);
+				SPCR |= (1 << SPIE);
 			}
 
 			void process_data(char c)
@@ -48,6 +86,7 @@ namespace Arduino
 				else {
 					this->reset_counter = 0;
 				}
+
 				if (this->reset_counter >= 3) {
 					// reset state
 					this->pos = 0;
