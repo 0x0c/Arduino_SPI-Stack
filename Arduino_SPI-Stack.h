@@ -73,8 +73,11 @@ namespace Arduino
 					SPCR |= (1 << DORD);
 				}
 
+				// SPI slave
 				SPCR &= ~(1 << MSTR);
+				// enable SPI
 				SPCR |= (1 << SPE);
+				// enable SPI interrupt
 				SPCR |= (1 << SPIE);
 			}
 
