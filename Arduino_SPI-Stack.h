@@ -13,7 +13,8 @@ namespace Arduino
 		class Stack
 		{
 		private:
-			uint8_t reset_counter = 0;
+			volatile uint8_t reset_counter = 0;
+			volatile uint8_t buffer_size = 0;
 			volatile uint8_t pos = 0;
 			volatile bool ready_to_process = false;
 
@@ -34,9 +35,10 @@ namespace Arduino
 
 			uint8_t *buffer;
 
-			Stack(uint8_t buffer_size)
+			Stack(uint8_t size)
 			{
-				this->buffer = new uint8_t[buffer_size];
+				this->buffer_size = size;
+				this->buffer = new uint8_t[size];
 				memset(this->buffer, 0, sizeof(this->buffer));
 			}
 
@@ -96,11 +98,11 @@ namespace Arduino
 					return;
 				}
 
-				if (this->pos < sizeof(this->buffer)) {
-					this->buffer[this->pos++] = c;
+				if (this->pos < this->buffer_size) {
+					this->buffer[this->pos] = c;
+					this->pos++;
 				}
-
-				if (this->pos >= sizeof(this->buffer)) {
+				if (this->pos >= this->buffer_size) {
 					this->ready_to_process = true;
 				}
 			}
