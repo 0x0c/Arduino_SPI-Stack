@@ -13,7 +13,6 @@ namespace Arduino
 		class Stack
 		{
 		private:
-			volatile uint8_t reset_counter = 0;
 			volatile uint8_t buffer_size = 0;
 			volatile uint8_t pos = 0;
 			volatile bool ready_to_process = false;
@@ -47,9 +46,10 @@ namespace Arduino
 				delete this->buffer;
 			}
 
-			void setup(SPIMode mode, BitOrder order)
+			void setup(SPIMode mode, BitOrder order, uint8_t clock_divider)
 			{
 				pinMode(MISO, OUTPUT);
+				SPIClass::setClockDivider(clock_divider);
 				SPCR |= _BV(SPE);
 
 				switch (mode) {
@@ -85,19 +85,11 @@ namespace Arduino
 
 			void process_data(char c)
 			{
-				if (c == 0xff) {
-					this->reset_counter++;
-				}
-				else {
-					this->reset_counter = 0;
-				}
-
-				if (this->reset_counter >= 3) {
-					// reset state
-					this->pos = 0;
-					return;
-				}
-
+				Serial.print("pos: ");
+				Serial.print(this->pos);
+				Serial.print(", ");
+				Serial.print("received: ");
+				Serial.println(c, BIN);
 				if (this->pos < this->buffer_size) {
 					this->buffer[this->pos] = c;
 					this->pos++;
@@ -114,6 +106,7 @@ namespace Arduino
 
 			void flush()
 			{
+				Serial.println("flush");
 				this->pos = 0;
 				this->ready_to_process = false;
 			}
