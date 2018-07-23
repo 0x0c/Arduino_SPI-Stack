@@ -34,6 +34,8 @@ namespace Arduino
 
 			uint8_t *buffer;
 
+			bool debug_mode = false;
+
 			Stack(uint8_t size)
 			{
 				this->buffer_size = size;
@@ -85,11 +87,14 @@ namespace Arduino
 
 			void process_data(char c)
 			{
-				Serial.print("pos: ");
-				Serial.print(this->pos);
-				Serial.print(", ");
-				Serial.print("received: ");
-				Serial.println(c, BIN);
+				if (this->debug_mode) {
+					Serial.print("pos: ");
+					Serial.print(this->pos);
+					Serial.print(", ");
+					Serial.print("received: ");
+					Serial.println(c, BIN);
+				}
+
 				if (this->pos < this->buffer_size) {
 					this->buffer[this->pos] = c;
 					this->pos++;
@@ -106,7 +111,10 @@ namespace Arduino
 
 			void flush()
 			{
-				Serial.println("flush");
+				if (this->debug_mode) {
+					Serial.println("flush");
+				}
+
 				this->pos = 0;
 				this->ready_to_process = false;
 			}
