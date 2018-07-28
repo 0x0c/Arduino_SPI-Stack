@@ -16,6 +16,9 @@ namespace Arduino
 			volatile uint8_t buffer_size = 0;
 			volatile uint8_t pos = 0;
 			volatile bool ready_to_process = false;
+			volatile char flush_command = 0xff;
+			volatile uint8_t flush_command_threshold = 3;
+			volatile uint8_t flush_command_count = 0;
 
 		public:
 			typedef enum
@@ -32,9 +35,8 @@ namespace Arduino
 				MSBFirst
 			} BitOrder;
 
-			uint8_t *buffer;
-
-			bool debug_mode = false;
+			volatile uint8_t *buffer;
+			volatile bool debug_mode = false;
 
 			Stack(uint8_t size)
 			{
@@ -46,6 +48,12 @@ namespace Arduino
 			~Stack()
 			{
 				delete this->buffer;
+			}
+
+			void set_flush_command_setting(const char command, const int threshold)
+			{
+				this->flush_command = command;
+				this->flush_command_threshold = threshold;
 			}
 
 			void setup(SPIMode mode, BitOrder order, uint8_t clock_divider)
@@ -88,11 +96,23 @@ namespace Arduino
 			void process_data(char c)
 			{
 				if (this->debug_mode) {
-					Serial.print("pos: ");
+					Serial.print("-----pos: ");
 					Serial.print(this->pos);
 					Serial.print(", ");
 					Serial.print("received: ");
-					Serial.println(c, BIN);
+					const char r = c & 0xff;
+					Serial.println(r, BIN);
+				}
+				if (this->flush_command == c) {
+					if (this->debug_mode) {
+						Serial.println("-----flush command received");
+					}
+					this->flush_command_count++;
+				}
+				if (this->flush_command_count >= this->flush_command_threshold) {
+					Serial.println("-----call flush command");
+					this->flush();
+					return;
 				}
 
 				if (this->pos < this->buffer_size) {
@@ -100,6 +120,9 @@ namespace Arduino
 					this->pos++;
 				}
 				if (this->pos >= this->buffer_size) {
+					if (this->debug_mode) {
+						Serial.println("-----ready to process");
+					}
 					this->ready_to_process = true;
 				}
 			}
@@ -112,9 +135,10 @@ namespace Arduino
 			void flush()
 			{
 				if (this->debug_mode) {
-					Serial.println("flush");
+					Serial.println("-----flush");
 				}
 
+				this->flush_command_count = 0;
 				this->pos = 0;
 				this->ready_to_process = false;
 			}
